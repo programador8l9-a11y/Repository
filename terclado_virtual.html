@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Teclado Virtual</title>
+    <style>
+        * {
+            user-select: none;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 25px;
+            max-width: 1000px;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+
+        .textarea-container {
+            margin-bottom: 25px;
+        }
+
+        #textInput {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            font-size: 18px;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            resize: vertical;
+            font-family: monospace;
+            transition: border-color 0.3s;
+        }
+
+        #textInput:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .keyboard {
+            background: #f0f0f0;
+            border-radius: 15px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+
+        .key-row {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 8px;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .key {
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 12px 8px;
+            min-width: 45px;
+            text-align: center;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            color: #333;
+        }
+
+        .key:hover {
+            background: #e0e0e0;
+            transform: translateY(-2px);
+        }
+
+        .key:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .key-special {
+            background: #667eea;
+            color: white;
+            border-color: #5a67d8;
+        }
+
+        .key-special:hover {
+            background: #5a67d8;
+        }
+
+        .key-space {
+            min-width: 200px;
+            flex-grow: 1;
+        }
+
+        .key-backspace {
+            min-width: 80px;
+        }
+
+        .key-enter {
+            min-width: 80px;
+        }
+
+        .key-shift {
+            min-width: 70px;
+        }
+
+        .active-key {
+            background: #48bb78;
+            color: white;
+            transform: scale(0.95);
+        }
+
+        .info {
+            text-align: center;
+            margin-top: 15px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .clear-btn {
+            background: #f56565;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+            transition: background 0.3s;
+        }
+
+        .clear-btn:hover {
+            background: #e53e3e;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .key {
+                padding: 10px 5px;
+                min-width: 35px;
+                font-size: 14px;
+            }
+            
+            .key-space {
+                min-width: 150px;
+            }
+            
+            .key-backspace, .key-enter {
+                min-width: 65px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎹 Teclado Virtual</h1>
+        
+        <div class="textarea-container">
+            <textarea id="textInput" placeholder="Clique aqui ou nas teclas virtuais para digitar..."></textarea>
+        </div>
+        
+        <div class="keyboard" id="keyboard">
+            <!-- As teclas serão inseridas aqui via JavaScript -->
+        </div>
+        
+        <div class="info">
+            <button class="clear-btn" id="clearBtn">Limpar Tudo</button>
+            <p>💡 Dica: Você também pode digitar diretamente no campo de texto usando seu teclado físico!</p>
+        </div>
+    </div>
+
+    <script>
+        // Definição do layout do teclado
+        const keyboardLayout = {
+            row1: ['`', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'Backspace'],
+            row2: ['Tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\\'],
+            row3: ['Caps', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', "'", 'Enter'],
+            row4: ['Shift', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 'Shift'],
+            row5: ['Space']
+        };
+
+        // Mapeamento de teclas especiais e seus comportamentos
+        const specialKeys = {
+            'Backspace': { action: 'backspace', display: '⌫' },
+            'Enter': { action: 'enter', display: '↵ Enter' },
+            'Tab': { action: 'tab', display: 'Tab' },
+            'Caps': { action: 'caps', display: 'Caps' },
+            'Shift': { action: 'shift', display: '⇧ Shift' },
+            'Space': { action: 'space', display: 'Espaço' }
+        };
+
+        // Estado do teclado virtual
+        let capsLock = false;
+        let shiftPressed = false;
+        let currentLayout = 'lowercase'; // 'lowercase', 'uppercase', 'shift'
+
+        // Elementos DOM
+        const textInput = document.getElementById('textInput');
+        const keyboardDiv = document.getElementById('keyboard');
+
+        // Função para obter o caractere correto baseado no estado do Caps e Shift
+        function getCharacter(key, isShiftActive, capsActive) {
+            // Teclas que não são letras
+            const symbolMappings = {
+                '`': { default: '`', shift: '~' },
+                '1': { default: '1', shift: '!' },
+                '2': { default: '2', shift: '@' },
+                '3': { default: '3', shift: '#' },
+                '4': { default: '4', shift: '$' },
+                '5': { default: '5', shift: '%' },
+                '6': { default: '6', shift: '^' },
+                '7': { default: '7', shift: '&' },
+                '8': { default: '8', shift: '*' },
+                '9': { default: '9', shift: '(' },
+                '0': { default: '0', shift: ')' },
+                '-': { default: '-', shift: '_' },
+                '=': { default: '=', shift: '+' },
+                '[': { default: '[', shift: '{' },
+                ']': { default: ']', shift: '}' },
+                '\\': { default: '\\', shift: '|' },
+                ';': { default: ';', shift: ':' },
+                "'": { default: "'", shift: '"' },
+                ',': { default: ',', shift: '<' },
+                '.': { default: '.', shift: '>' },
+                '/': { default: '/', shift: '?' }
+            };
+
+            // Se for um símbolo especial
+            if (symbolMappings[key]) {
+                return isShiftActive ? symbolMappings[key].shift : symbolMappings[key].default;
+            }
+
+            // Se for letra
+            if (/[a-zA-Z]/.test(key)) {
+                if (isShiftActive) {
+                    return key.toUpperCase();
+                } else if (capsActive) {
+                    return key.toUpperCase();
+                } else {
+                    return key.toLowerCase();
+                }
+            }
+
+            // Se for espaço
+            if (key === 'Space') {
+                return ' ';
+            }
+
+            return key;
+        }
+
+        // Função para processar ações das teclas especiais
+        function handleSpecialKey(action, key) {
+            const input = textInput;
+            const start = input.selectionStart;
+            const end = input.selectionEnd;
+            const text = input.value;
+
+            switch(action) {
+                case 'backspace':
+                    if (start === end && start > 0) {
+                        input.value = text.substring(0, start - 1) + text.substring(end);
+                        input.selectionStart = input.selectionEnd = start - 1;
+                    } else if (start !== end) {
+                        input.value = text.substring(0, start) + text.substring(end);
+                        input.selectionStart = input.selectionEnd = start;
+                    }
+                    break;
+                    
+                case 'enter':
+                    input.value = text.substring(0, start) + '\n' + text.substring(end);
+                    input.selectionStart = input.selectionEnd = start + 1;
+                    break;
+                    
+                case 'tab':
+                    input.value = text.substring(0, start) + '    ' + text.substring(end);
+                    input.selectionStart = input.selectionEnd = start + 4;
+                    break;
+                    
+                case 'caps':
+                    capsLock = !capsLock;
+                    updateKeyboardVisual();
+                    break;
+                    
+                case 'shift':
+                    shiftPressed = !shiftPressed;
+                    updateKeyboardVisual();
+                    // Reset shift após 1 segundo se não houver nova tecla
+                    if (shiftPressed) {
+                        setTimeout(() => {
+                            if (shiftPressed) {
+                                shiftPressed = false;
+                                updateKeyboardVisual();
+                            }
+                        }, 1000);
+                    }
+                    break;
+                    
+                case 'space':
+                    input.value = text.substring(0, start) + ' ' + text.substring(end);
+                    input.selectionStart = input.selectionEnd = start + 1;
+                    break;
+            }
+            
+            // Disparar evento de input
+            input.dispatchEvent(new Event('input'));
+        }
+
+        // Função para inserir caractere normal
+        function insertCharacter(key, isShiftActive, capsActive) {
+            const input = textInput;
+            const start = input.selectionStart;
+            const end = input.selectionEnd;
+            const char = getCharacter(key, isShiftActive, capsActive);
+            
+            input.value = input.value.substring(0, start) + char + input.value.substring(end);
+            input.selectionStart = input.selectionEnd = start + char.length;
+            
+            // Disparar evento de input
+            input.dispatchEvent(new Event('input'));
+        }
+
+        // Função chamada ao clicar em uma tecla
+        function onKeyClick(key) {
+            // Adicionar efeito visual de clique
+            const keyElements = document.querySelectorAll('.key');
+            keyElements.forEach(el => {
+                if (el.getAttribute('data-key') === key || 
+                    (specialKeys[key] && el.getAttribute('data-key') === key)) {
+                    el.classList.add('active-key');
+                    setTimeout(() => el.classList.remove('active-key'), 150);
+                }
+            });
+            
+            // Verificar se é tecla especial
+            if (specialKeys[key]) {
+                handleSpecialKey(specialKeys[key].action, key);
+            } else {
+                // Inserir caractere considerando Caps e Shift
+                insertCharacter(key, shiftPressed, capsLock);
+                
+                // Se shift estava pressionado, desativar após inserir caractere
+                if (shiftPressed) {
+                    shiftPressed = false;
+                    updateKeyboardVisual();
+                }
+            }
+            
+            // Manter foco no textarea
+            textInput.focus();
+        }
+
+        // Atualizar visual do teclado baseado no estado Caps/Shift
+        function updateKeyboardVisual() {
+            const allKeys = document.querySelectorAll('.key');
+            allKeys.forEach(keyElement => {
+                const key = keyElement.getAttribute('data-key');
+                
+                // Atualizar texto exibido na tecla
+                if (!specialKeys[key]) {
+                    let displayText;
+                    if (shiftPressed) {
+                        displayText = getCharacter(key, true, false);
+                    } else if (capsLock && /[a-zA-Z]/.test(key)) {
+                        displayText = key.toUpperCase();
+                    } else {
+                        displayText = key;
+                    }
+                    keyElement.textContent = displayText;
+                } else {
+                    // Para teclas especiais, usar o display definido
+                    keyElement.textContent = specialKeys[key].display;
+                }
+                
+                // Destacar tecla Caps e Shift quando ativas
+                if (key === 'Caps' && capsLock) {
+                    keyElement.style.background = '#48bb78';
+                    keyElement.style.color = 'white';
+                } else if (key === 'Caps' && !capsLock) {
+                    keyElement.style.background = '';
+                    keyElement.style.color = '';
+                }
+                
+                if (key === 'Shift' && shiftPressed) {
+                    keyElement.style.background = '#48bb78';
+                    keyElement.style.color = 'white';
+                } else if (key === 'Shift' && !shiftPressed) {
+                    keyElement.style.background = '';
+                    keyElement.style.color = '';
+                }
+            });
+        }
+
+        // Criar o teclado visualmente
+        function createKeyboard() {
+            keyboardDiv.innerHTML = '';
+            
+            for (const row in keyboardLayout) {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'key-row';
+                
+                keyboardLayout[row].forEach(key => {
+                    const keyButton = document.createElement('div');
+                    keyButton.className = 'key';
+                    keyButton.setAttribute('data-key', key);
+                    
+                    // Adicionar classes especiais para estilização
+                    if (specialKeys[key]) {
+                        keyButton.classList.add('key-special');
+                        if (key === 'Space') keyButton.classList.add('key-space');
+                        if (key === 'Backspace') keyButton.classList.add('key-backspace');
+                        if (key === 'Enter') keyButton.classList.add('key-enter');
+                        if (key === 'Shift') keyButton.classList.add('key-shift');
+                    }
+                    
+                    // Definir texto da tecla
+                    if (specialKeys[key]) {
+                        keyButton.textContent = specialKeys[key].display;
+                    } else {
+                        keyButton.textContent = key;
+                    }
+                    
+                    // Adicionar evento de clique
+                    keyButton.addEventListener('click', () => onKeyClick(key));
+                    
+                    rowDiv.appendChild(keyButton);
+                });
+                
+                keyboardDiv.appendChild(rowDiv);
+            }
+        }
+
+        // Suporte para teclado físico sincronizado com o virtual
+        function setupPhysicalKeyboardSupport() {
+            textInput.addEventListener('keydown', (e) => {
+                // Prevenir comportamento padrão para teclas que controlamos
+                const key = e.key;
+                let mappedKey = null;
+                
+                // Mapear teclas físicas para as virtuais
+                if (key === 'Backspace') mappedKey = 'Backspace';
+                else if (key === 'Enter') mappedKey = 'Enter';
+                else if (key === 'Tab') mappedKey = 'Tab';
+                else if (key === ' ') mappedKey = 'Space';
+                else if (key === 'Shift') mappedKey = 'Shift';
+                else if (key === 'CapsLock') mappedKey = 'Caps';
+                else if (key.length === 1 && /[a-zA-Z0-9`~!@#$%^&*()_+[\]{};':",.<>/?\\|]/.test(key)) {
+                    // Para teclas normais, encontrar a versão sem shift
+                    const lowerKey = key.toLowerCase();
+                    if (keyboardLayout.row1.includes(lowerKey) || 
+                        keyboardLayout.row2.includes(lowerKey) ||
+                        keyboardLayout.row3.includes(lowerKey) ||
+                        keyboardLayout.row4.includes(lowerKey)) {
+                        mappedKey = lowerKey;
+                    }
+                }
+                
+                if (mappedKey) {
+                    e.preventDefault();
+                    // Atualizar estado Shift se necessário
+                    if (mappedKey === 'Shift') {
+                        shiftPressed = e.shiftKey;
+                        updateKeyboardVisual();
+                    }
+                    onKeyClick(mappedKey);
+                }
+            });
+            
+            textInput.addEventListener('keyup', (e) => {
+                if (e.key === 'Shift') {
+                    shiftPressed = false;
+                    updateKeyboardVisual();
+                }
+            });
+        }
+
+        // Inicializar o teclado
+        function init() {
+            createKeyboard();
+            setupPhysicalKeyboardSupport();
+            
+            // Botão limpar
+            document.getElementById('clearBtn').addEventListener('click', () => {
+                textInput.value = '';
+                textInput.focus();
+            });
+            
+            // Garantir que o textarea mantenha o foco quando clicar em áreas vazias
+            textInput.addEventListener('click', () => textInput.focus());
+            
+            // Foco inicial
+            textInput.focus();
+        }
+        
+        // Iniciar tudo quando a página carregar
+        init();
+    </script>
+</body>
+</html>
